@@ -3,7 +3,9 @@
 #include <omp.h>
 
 #include <cmath>
+#include <cstddef>
 #include <vector>
+#include <utility>
 
 #include "vlasova_a_simpson_method/common/include/common.hpp"
 
@@ -44,133 +46,80 @@ bool VlasovaASimpsonMethodOMP::PreProcessingImpl() {
   size_t dim = task_data_.a.size();
   h_.resize(dim);
   dimensions_.resize(dim);
-  total_points_ = 1;
 
   for (size_t i = 0; i < dim; ++i) {
     h_[i] = (task_data_.b[i] - task_data_.a[i]) / task_data_.n[i];
     dimensions_[i] = task_data_.n[i] + 1;
-    total_points_ *= dimensions_[i];
-  }
-
-  weights_.resize(dim);
-  for (size_t i = 0; i < dim; ++i) {
-    int steps = task_data_.n[i];
-    weights_[i].resize(steps + 1);
-    for (int j = 0; j <= steps; ++j) {
-      if (j == 0 || j == steps) {
-        weights_[i][j] = 1.0;
-      } else if (j % 2 == 0) {
-        weights_[i][j] = 2.0;
-      } else {
-        weights_[i][j] = 4.0;
-      }
-    }
   }
 
   return true;
 }
 
+void VlasovaASimpsonMethodOMP::Nextindex(std::vector<int> &index) {
+  size_t dim = index.size();
+  for (size_t i = 0; i < dim; ++i) {
+    index[i]++;
+    if (index[i] < dimensions_[i]) {
+      return;
+    }
+    index[i] = 0;
+  }
+}
+
+void VlasovaASimpsonMethodOMP::ComputeWeight(const std::vector<int> &index, double &weight) const {
+  weight = 1.0;
+  size_t dim = index.size();
+
+  for (size_t i = 0; i < dim; ++i) {
+    int idx = index[i];
+    int steps = task_data_.n[i];
+
+    if (idx == 0 || idx == steps) {
+      weight *= 1.0;
+    } else if (idx % 2 == 0) {
+      weight *= 2.0;
+    } else {
+      weight *= 4.0;
+    }
+  }
+}
+
+void VlasovaASimpsonMethodOMP::ComputePoint(const std::vector<int> &index, std::vector<double> &point) const {
+  size_t dim = index.size();
+  point.resize(dim);
+
+  for (size_t i = 0; i < dim; ++i) {
+    point[i] = task_data_.a[i] + (index[i] * h_[i]);
+  }
+}
+
 bool VlasovaASimpsonMethodOMP::RunImpl() {
   size_t dim = task_data_.a.size();
+  
+  size_t total_points = 1;
+  for (size_t i = 0; i < dim; ++i) {
+    total_points *= static_cast<size_t>(dimensions_[i]);
+  }
+
   double sum = 0.0;
 
-  if (dim == 1) {
-    int n0 = task_data_.n[0];
-    double a0 = task_data_.a[0];
-    double h0 = h_[0];
-    const auto &w0 = weights_[0];
-    const auto &func = task_data_.func;
-
-#pragma omp parallel for reduction(+ : sum) schedule(static)
-    for (int i = 0; i <= n0; ++i) {
-      double x = a0 + i * h0;
-      sum += w0[i] * func({x});
-    }
-
-    result_ = sum * h0 / 3.0;
-    GetOutput() = result_;
-    return true;
-  }
-
-  if (dim == 2) {
-    int n0 = task_data_.n[0];
-    int n1 = task_data_.n[1];
-    double a0 = task_data_.a[0];
-    double a1 = task_data_.a[1];
-    double h0 = h_[0];
-    double h1 = h_[1];
-    const auto &w0 = weights_[0];
-    const auto &w1 = weights_[1];
-    const auto &func = task_data_.func;
-
-#pragma omp parallel for collapse(2) reduction(+ : sum) schedule(static)
-    for (int i = 0; i <= n0; ++i) {
-      for (int j = 0; j <= n1; ++j) {
-        double x = a0 + i * h0;
-        double y = a1 + j * h1;
-        sum += w0[i] * w1[j] * func({x, y});
-      }
-    }
-
-    result_ = sum * h0 * h1 / 9.0;
-    GetOutput() = result_;
-    return true;
-  }
-
-  if (dim == 3) {
-    int n0 = task_data_.n[0];
-    int n1 = task_data_.n[1];
-    int n2 = task_data_.n[2];
-    double a0 = task_data_.a[0];
-    double a1 = task_data_.a[1];
-    double a2 = task_data_.a[2];
-    double h0 = h_[0];
-    double h1 = h_[1];
-    double h2 = h_[2];
-    const auto &w0 = weights_[0];
-    const auto &w1 = weights_[1];
-    const auto &w2 = weights_[2];
-    const auto &func = task_data_.func;
-
-#pragma omp parallel for collapse(3) reduction(+ : sum) schedule(static)
-    for (int i = 0; i <= n0; ++i) {
-      for (int j = 0; j <= n1; ++j) {
-        for (int k = 0; k <= n2; ++k) {
-          double x = a0 + i * h0;
-          double y = a1 + j * h1;
-          double z = a2 + k * h2;
-          sum += w0[i] * w1[j] * w2[k] * func({x, y, z});
-        }
-      }
-    }
-
-    result_ = sum * h0 * h1 * h2 / 27.0;
-    GetOutput() = result_;
-    return true;
-  }
-
-#pragma omp parallel reduction(+ : sum)
-  {
-    std::vector<int> local_index(dim, 0);
-    std::vector<double> local_point(dim);
-
-#pragma omp for schedule(static)
-    for (size_t idx = 0; idx < total_points_; ++idx) {
+   #pragma omp parallel default(none) shared(dim, total_points) reduction(+:sum) 
+   {
+    std::vector<int> cur_index(dim, 0);
+    std::vector<double> cur_point;
+    double local_weight = 0.0;
+    
+    #pragma omp for schedule(static)
+    for (size_t idx = 0; idx < total_points; ++idx) {
       size_t temp_idx = idx;
-      double weight = 1.0;
-
       for (size_t i = 0; i < dim; ++i) {
-        int index_i = static_cast<int>(temp_idx % dimensions_[i]);
-        temp_idx /= dimensions_[i];
-        local_index[i] = index_i;
-        weight *= weights_[i][index_i];
+        cur_index[i] = static_cast<int>(temp_idx % static_cast<int>(dimensions_[i]));
+        temp_idx /= static_cast<int>(dimensions_[i]);
       }
-
-      for (size_t i = 0; i < dim; ++i) {
-        local_point[i] = task_data_.a[i] + (local_index[i] * h_[i]);
-      }
-
-      sum += weight * task_data_.func(local_point);
+      
+      ComputeWeight(cur_index, local_weight);
+      ComputePoint(cur_index, cur_point);
+      sum += local_weight * task_data_.func(cur_point);
     }
   }
 
