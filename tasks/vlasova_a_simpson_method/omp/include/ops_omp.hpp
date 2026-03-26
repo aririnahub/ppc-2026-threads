@@ -28,8 +28,8 @@ class VlasovaASimpsonMethodOMP : public BaseTask {
 
   InType task_data_;
   double result_ = 0.0;
-  std::vector<double> h_;                     // шаги интегрирования
-  std::vector<int> dimensions_;               // количество точек по каждому измерению n[i] + 1
+  std::vector<double> h_;        // шаги интегрирования
+  std::vector<int> dimensions_;  // количество точек по каждому измерению n[i] + 1
 };
 
 }  // namespace vlasova_a_simpson_method

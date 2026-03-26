@@ -4,8 +4,8 @@
 
 #include <cmath>
 #include <cstddef>
-#include <vector>
 #include <utility>
+#include <vector>
 
 #include "vlasova_a_simpson_method/common/include/common.hpp"
 
@@ -95,7 +95,7 @@ void VlasovaASimpsonMethodOMP::ComputePoint(const std::vector<int> &index, std::
 
 bool VlasovaASimpsonMethodOMP::RunImpl() {
   size_t dim = task_data_.a.size();
-  
+
   size_t total_points = 1;
   for (size_t i = 0; i < dim; ++i) {
     total_points *= static_cast<size_t>(dimensions_[i]);
@@ -103,20 +103,20 @@ bool VlasovaASimpsonMethodOMP::RunImpl() {
 
   double sum = 0.0;
 
-   #pragma omp parallel default(none) shared(dim, total_points) reduction(+:sum) 
-   {
+#pragma omp parallel default(none) shared(dim, total_points) reduction(+ : sum)
+  {
     std::vector<int> cur_index(dim, 0);
     std::vector<double> cur_point;
     double local_weight = 0.0;
-    
-    #pragma omp for schedule(static)
+
+#pragma omp for schedule(static)
     for (size_t idx = 0; idx < total_points; ++idx) {
       size_t temp_idx = idx;
       for (size_t i = 0; i < dim; ++i) {
         cur_index[i] = static_cast<int>(temp_idx % static_cast<int>(dimensions_[i]));
         temp_idx /= static_cast<int>(dimensions_[i]);
       }
-      
+
       ComputeWeight(cur_index, local_weight);
       ComputePoint(cur_index, cur_point);
       sum += local_weight * task_data_.func(cur_point);
