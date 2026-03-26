@@ -55,17 +55,6 @@ bool VlasovaASimpsonMethodOMP::PreProcessingImpl() {
   return true;
 }
 
-void VlasovaASimpsonMethodOMP::Nextindex(std::vector<int> &index) {
-  size_t dim = index.size();
-  for (size_t i = 0; i < dim; ++i) {
-    index[i]++;
-    if (index[i] < dimensions_[i]) {
-      return;
-    }
-    index[i] = 0;
-  }
-}
-
 void VlasovaASimpsonMethodOMP::ComputeWeight(const std::vector<int> &index, double &weight) const {
   weight = 1.0;
   size_t dim = index.size();
