@@ -92,49 +92,54 @@ bool VlasovaASimpsonMethodSTL::RunImpl() {
   for (size_t i = 0; i < dim; ++i) {
     total_points *= static_cast<size_t>(dimensions_[i]);
   }
-  
+
   if (total_points < 10000) {
     std::vector<int> cur_index(dim, 0);
     std::vector<double> cur_point;
     double sum = 0.0;
-    
+
     std::function<bool(size_t)> next_index = [&](size_t d) -> bool {
-      if (d == dim) return false;
+      if (d == dim) {
+        return false;
+      }
       cur_index[d]++;
-      if (cur_index[d] < dimensions_[d]) return true;
+      if (cur_index[d] < dimensions_[d]) {
+        return true;
+      }
       cur_index[d] = 0;
       return next_index(d + 1);
     };
-    
+
     do {
       double weight = 0.0;
       ComputeWeight(cur_index, weight);
       ComputePoint(cur_index, cur_point);
       sum += weight * task_data_.func(cur_point);
     } while (next_index(0));
-    
+
     double factor = 1.0;
     for (size_t i = 0; i < dim; ++i) {
       factor *= h_[i] / 3.0;
     }
-    
+
     result_ = sum * factor;
     GetOutput() = result_;
     return true;
   }
-  
+
   int first_dim_size = dimensions_[0];
   std::vector<double> partial_sums(first_dim_size);
   std::vector<int> indices(first_dim_size);
   std::iota(indices.begin(), indices.end(), 0);
-  
-  std::for_each(std::execution::par, indices.begin(), indices.end(), [this, dim, first_dim_size, &partial_sums](int idx0) {
+
+  std::for_each(std::execution::par, indices.begin(), indices.end(),
+                [this, dim, first_dim_size, &partial_sums](int idx0) {
     static thread_local std::vector<int> cur_index(dim);
     static thread_local std::vector<double> cur_point;
     cur_index[0] = idx0;
-    
+
     double local_sum = 0.0;
-    
+
     // Рекурсивный обход остальных измерений
     std::function<void(size_t)> traverse = [&](size_t d) {
       if (d == dim) {
@@ -144,27 +149,27 @@ bool VlasovaASimpsonMethodSTL::RunImpl() {
         local_sum += weight * task_data_.func(cur_point);
         return;
       }
-      
+
       for (int i = 0; i < dimensions_[d]; ++i) {
         cur_index[d] = i;
         traverse(d + 1);
       }
     };
-    
+
     traverse(1);  // Начинаем со второго измерения
     partial_sums[idx0] = local_sum;
   });
-  
+
   double sum = std::reduce(std::execution::par_unseq, partial_sums.begin(), partial_sums.end(), 0.0);
-  
+
   double factor = 1.0;
   for (size_t i = 0; i < dim; ++i) {
     factor *= h_[i] / 3.0;
   }
-  
+
   result_ = sum * factor;
   GetOutput() = result_;
-  
+
   return true;
 }
 
