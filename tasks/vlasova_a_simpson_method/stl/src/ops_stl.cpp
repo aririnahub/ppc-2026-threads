@@ -186,7 +186,7 @@ bool VlasovaASimpsonMethodSTL::RunImpl() {
     total_points *= static_cast<size_t>(dimensions_[i]);
   }
 
-  double sum;
+  double sum = 0.0;
   if (total_points < 10000) {
     sum = RunSequential();
   } else {
