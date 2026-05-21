@@ -25,7 +25,7 @@ class VlasovaASimpsonMethodPerfTests : public ppc::util::BaseRunPerfTests<InType
     std::vector<double> b = {2.0, 2.0, 2.0};
     std::vector<int> n = {200, 200, 200};
 
-    input_data_ = SimpsonTask(Gaussian3D, a, b, n); //функция Гаусса на кубе [-2,2]^3 с сеткой 200x200x200
+    input_data_ = SimpsonTask(Gaussian3D, a, b, n);  // функция Гаусса на кубе [-2,2]^3 с сеткой 200x200x200
   }
 
   bool CheckTestOutputData(OutType &output_data) final {
