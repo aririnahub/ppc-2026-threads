@@ -82,7 +82,7 @@ class VlasovaASimpsonMethodFuncTests : public ppc::util::BaseRunFuncTests<InType
 namespace {
 
 const std::array<TestType, 22> kTestCases = {
-    // 1D
+    // 1D tests
     std::make_tuple(std::vector<double>{0.0}, std::vector<double>{1.0}, std::vector<int>{10}, 1.0, "constant_1d"),
     std::make_tuple(std::vector<double>{0.0}, std::vector<double>{1.0}, std::vector<int>{10}, 0.5, "linear_1d"),
     std::make_tuple(std::vector<double>{0.0}, std::vector<double>{1.0}, std::vector<int>{10}, 1.0 / 3.0,
@@ -96,7 +96,7 @@ const std::array<TestType, 22> kTestCases = {
                     "cubic_1d_symmetric"),
     std::make_tuple(std::vector<double>{0.0}, std::vector<double>{2.0}, std::vector<int>{20}, 2.0, "linear_1d_double"),
 
-    // 2D
+    // 2D tests
     std::make_tuple(std::vector<double>{0.0, 0.0}, std::vector<double>{1.0, 1.0}, std::vector<int>{10, 10}, 1.0,
                     "constant_2d"),
     std::make_tuple(std::vector<double>{0.0, 0.0}, std::vector<double>{1.0, 1.0}, std::vector<int>{10, 10}, 0.25,
@@ -109,7 +109,7 @@ const std::array<TestType, 22> kTestCases = {
                     "quadratic_2d_only_x"),
     std::make_tuple(std::vector<double>{0.0, 0.0}, std::vector<double>{1.0, 1.0}, std::vector<int>{10, 10}, 1.0 / 3.0,
                     "quadratic_2d_only_y"),
-    // 3D
+    // 3D tests
     std::make_tuple(std::vector<double>{0.0, 0.0, 0.0}, std::vector<double>{1.0, 1.0, 1.0}, std::vector<int>{8, 8, 8},
                     1.0, "constant_3d"),
     std::make_tuple(std::vector<double>{0.0, 0.0, 0.0}, std::vector<double>{1.0, 1.0, 1.0}, std::vector<int>{8, 8, 8},
